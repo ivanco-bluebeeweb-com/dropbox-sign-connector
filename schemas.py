@@ -1,12 +1,15 @@
-"""Pydantic schemas for Dropbox Sign Connector (C30. Email Marketing & Newsletter)."""
+"""Pydantic schemas for Dropbox Sign Connector (C34. E-Signature & Agreement Management)."""
 from __future__ import annotations
-from typing import Any, Optional
+from typing import Any, Optional, List, Dict
 from pydantic import BaseModel, Field
 
+class NoParams(BaseModel):
+    pass
+
 class ConnectParams(BaseModel):
-    label: str = Field(default="", description="Friendly connection label, e.g. Acme Dropbox Sign.")
-    api_key: str = Field(description="Marketing API Key or Bearer Token.")
-    base_url: str = Field(default="", description="Optional custom base URL or instance domain.")
+    label: str = Field(default="", description="Friendly connection label, e.g. Primary Dropbox Sign.")
+    api_key: str = Field(description="Dropbox Sign API Key (Basic Auth).")
+    base_url: str = Field(default="https://api.hellosign.com/v3", description="Dropbox Sign API base URL.")
 
 class ConnectionIdParams(BaseModel):
     connection_id: str = Field(default="", description="Connection identifier (empty uses active connection).")
@@ -23,225 +26,44 @@ class ConnectionList(BaseModel):
     total: int
 
 class DeleteResult(BaseModel):
-    id: str
-    deleted: bool
+    success: bool
     message: str
 
-class ListSubscriberParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    limit: int = Field(default=50, description="Max records to return (1-100).")
-    cursor: str = Field(default="", description="Pagination cursor or page token.")
-
-class GetSubscriberParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    subscriber_id: str = Field(description="Unique identifier of the subscriber.")
-
-class CreateSubscriberParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    name: str = Field(description="Name or title of the record.")
-    details: Optional[dict[str, Any]] = Field(default=None, description="Detailed attributes and payload.")
-
-class UpdateSubscriberParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    subscriber_id: str = Field(description="Unique identifier of the subscriber.")
-    fields: dict[str, Any] = Field(description="Attributes to update.")
-
-class DeleteSubscriberParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    subscriber_id: str = Field(description="Unique identifier of the subscriber.")
-
-class SubscriberRecord(BaseModel):
+class AgreementRecord(BaseModel):
     id: str
     name: str
-    status: str = "active"
-    raw: dict[str, Any] = {}
+    status: str
+    created_at: Optional[str] = None
+    signers: List[str] = Field(default_factory=list)
+    raw: Dict[str, Any] = Field(default_factory=dict)
 
-class SubscriberList(BaseModel):
-    items: list[SubscriberRecord]
+class AgreementList(BaseModel):
+    agreements: list[AgreementRecord]
     total: int
-    next_cursor: Optional[str] = None
 
-class ListCampaignParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    limit: int = Field(default=50, description="Max records to return (1-100).")
-    cursor: str = Field(default="", description="Pagination cursor or page token.")
+class ListAgreementsParams(BaseModel):
+    connection_id: str = Field(default="", description="Optional connection ID.")
+    status: Optional[str] = Field(default=None, description="Optional status filter (e.g. OUT_FOR_SIGNATURE, SIGNED, COMPLETED).")
 
-class GetCampaignParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    campaign_id: str = Field(description="Unique identifier of the campaign.")
+class GetAgreementParams(BaseModel):
+    connection_id: str = Field(default="", description="Optional connection ID.")
+    agreement_id: str = Field(description="Dropbox Sign agreement or signature request ID.")
 
-class CreateCampaignParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    name: str = Field(description="Name or title of the record.")
-    details: Optional[dict[str, Any]] = Field(default=None, description="Detailed attributes and payload.")
+class CreateSignatureRequestParams(BaseModel):
+    connection_id: str = Field(default="", description="Optional connection ID.")
+    title: str = Field(description="Document or agreement title.")
+    recipient_email: str = Field(description="Signer email address.")
+    recipient_name: Optional[str] = Field(default=None, description="Signer full name.")
+    message: Optional[str] = Field(default=None, description="Message to signer.")
 
-class UpdateCampaignParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    campaign_id: str = Field(description="Unique identifier of the campaign.")
-    fields: dict[str, Any] = Field(description="Attributes to update.")
+class CancelSignatureRequestParams(BaseModel):
+    connection_id: str = Field(default="", description="Optional connection ID.")
+    agreement_id: str = Field(description="Dropbox Sign agreement or signature request ID.")
+    reason: Optional[str] = Field(default="Canceled by user request", description="Reason for cancellation.")
 
-class DeleteCampaignParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    campaign_id: str = Field(description="Unique identifier of the campaign.")
-
-class CampaignRecord(BaseModel):
-    id: str
-    name: str
-    status: str = "active"
-    raw: dict[str, Any] = {}
-
-class CampaignList(BaseModel):
-    items: list[CampaignRecord]
-    total: int
-    next_cursor: Optional[str] = None
-
-class ListListParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    limit: int = Field(default=50, description="Max records to return (1-100).")
-    cursor: str = Field(default="", description="Pagination cursor or page token.")
-
-class GetListParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    list_id: str = Field(description="Unique identifier of the list.")
-
-class CreateListParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    name: str = Field(description="Name or title of the record.")
-    details: Optional[dict[str, Any]] = Field(default=None, description="Detailed attributes and payload.")
-
-class UpdateListParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    list_id: str = Field(description="Unique identifier of the list.")
-    fields: dict[str, Any] = Field(description="Attributes to update.")
-
-class DeleteListParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    list_id: str = Field(description="Unique identifier of the list.")
-
-class ListRecord(BaseModel):
-    id: str
-    name: str
-    status: str = "active"
-    raw: dict[str, Any] = {}
-
-class ListList(BaseModel):
-    items: list[ListRecord]
-    total: int
-    next_cursor: Optional[str] = None
-
-class ListSegmentParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    limit: int = Field(default=50, description="Max records to return (1-100).")
-    cursor: str = Field(default="", description="Pagination cursor or page token.")
-
-class GetSegmentParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    segment_id: str = Field(description="Unique identifier of the segment.")
-
-class CreateSegmentParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    name: str = Field(description="Name or title of the record.")
-    details: Optional[dict[str, Any]] = Field(default=None, description="Detailed attributes and payload.")
-
-class UpdateSegmentParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    segment_id: str = Field(description="Unique identifier of the segment.")
-    fields: dict[str, Any] = Field(description="Attributes to update.")
-
-class DeleteSegmentParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    segment_id: str = Field(description="Unique identifier of the segment.")
-
-class SegmentRecord(BaseModel):
-    id: str
-    name: str
-    status: str = "active"
-    raw: dict[str, Any] = {}
-
-class SegmentList(BaseModel):
-    items: list[SegmentRecord]
-    total: int
-    next_cursor: Optional[str] = None
-
-class ListTemplateParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    limit: int = Field(default=50, description="Max records to return (1-100).")
-    cursor: str = Field(default="", description="Pagination cursor or page token.")
-
-class GetTemplateParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    template_id: str = Field(description="Unique identifier of the template.")
-
-class CreateTemplateParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    name: str = Field(description="Name or title of the record.")
-    details: Optional[dict[str, Any]] = Field(default=None, description="Detailed attributes and payload.")
-
-class UpdateTemplateParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    template_id: str = Field(description="Unique identifier of the template.")
-    fields: dict[str, Any] = Field(description="Attributes to update.")
-
-class DeleteTemplateParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    template_id: str = Field(description="Unique identifier of the template.")
-
-class TemplateRecord(BaseModel):
-    id: str
-    name: str
-    status: str = "active"
-    raw: dict[str, Any] = {}
-
-class TemplateList(BaseModel):
-    items: list[TemplateRecord]
-    total: int
-    next_cursor: Optional[str] = None
-
-class ListAutomationParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    limit: int = Field(default=50, description="Max records to return (1-100).")
-    cursor: str = Field(default="", description="Pagination cursor or page token.")
-
-class GetAutomationParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    automation_id: str = Field(description="Unique identifier of the automation.")
-
-class CreateAutomationParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    name: str = Field(description="Name or title of the record.")
-    details: Optional[dict[str, Any]] = Field(default=None, description="Detailed attributes and payload.")
-
-class UpdateAutomationParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    automation_id: str = Field(description="Unique identifier of the automation.")
-    fields: dict[str, Any] = Field(description="Attributes to update.")
-
-class DeleteAutomationParams(BaseModel):
-    connection_id: str = Field(default="", description="Connection identifier.")
-    automation_id: str = Field(description="Unique identifier of the automation.")
-
-class AutomationRecord(BaseModel):
-    id: str
-    name: str
-    status: str = "active"
-    raw: dict[str, Any] = {}
-
-class AutomationList(BaseModel):
-    items: list[AutomationRecord]
-    total: int
-    next_cursor: Optional[str] = None
-
-class AuditAudienceHealthResult(BaseModel):
+class ESignAuditReport(BaseModel):
+    total_agreements: int
+    pending_signatures: int
+    completed_agreements: int
+    expired_or_declined: int
     summary: str
-    metrics: dict[str, Any]
-    timestamp: str
-
-class GetCampaignAnalyticsResult(BaseModel):
-    summary: str
-    metrics: dict[str, Any]
-    timestamp: str
-
-
-class NoParams(BaseModel):
-    """Empty parameter model."""
-    pass

@@ -1,3 +1,9 @@
-# Dropbox Sign Connector - IDEAL_ONBOARDING.md
+# Dropbox Sign Connector — Ideal Onboarding & First Launch
 
-Standard documentation for Dropbox Sign Connector in Imperal Cloud.
+**Compliance:** ONBOARDING_FIRST_LAUNCH_STANDARD.md
+
+## Шаги онбординга
+1. **Экран первого запуска:** Назначение коннектора Dropbox Sign и требования к правам доступа.
+2. **Ввод учетных данных:** Форма с явными лейблами, валидацией формата и подсказкой для получения ключа.
+3. **Проверка подключения:** Немедленный вызов `GET /v3/account` с отображением статуса.
+4. **Empty State:** Наглядные рекомендации по первому действию, если данных нет.

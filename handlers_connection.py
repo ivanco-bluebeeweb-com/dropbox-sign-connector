@@ -1,18 +1,18 @@
-"""Connection lifecycle for Dropbox Sign Connector."""
+"""Connection management for Dropbox Sign Connector."""
 from __future__ import annotations
-import json, uuid
+import uuid, json
+from typing import Any
 from imperal_sdk import ActionResult
-from dropbox_sign_client import DropboxSignClient
 from app import chat
 from schemas import (
-    NoParams,
-    ConnectParams, ConnectionIdParams, ConnectionList, ConnectionRecord, DeleteResult
+    NoParams, ConnectParams, ConnectionIdParams, ConnectionRecord, ConnectionList, DeleteResult
 )
+from dropbox_sign_client import DropboxSignClient
 
 _SECRET = "dropbox_sign_connections"
 
-def _mask(value: str) -> str:
-    return value[:4] + "…" + value[-4:] if len(value) > 10 else "***"
+def _mask(v: str) -> str:
+    return v[:4] + "…" + v[-4:] if len(v) > 8 else "***"
 
 async def _load_connections(ctx) -> list[dict]:
     raw = await ctx.secrets.get(_SECRET)
@@ -24,18 +24,26 @@ async def _load_connections(ctx) -> list[dict]:
 async def _save_connections(ctx, conns: list[dict]) -> None:
     await ctx.secrets.set(_SECRET, json.dumps(conns))
 
-async def resolve_connection(ctx, connection_id: str = "") -> dict | None:
+async def resolve_client(ctx, connection_id: str = "") -> DropboxSignClient:
     conns = await _load_connections(ctx)
-    if not conns: return None
-    if not connection_id:
+    if not conns:
+        raise ValueError("No Dropbox Sign connections configured. Use connect_dropbox_sign first.")
+    conn = None
+    if connection_id:
+        for c in conns:
+            if c.get("id") == connection_id:
+                conn = c
+                break
+        if not conn:
+            raise ValueError(f"Connection {connection_id} not found.")
+    else:
         for c in conns:
             if c.get("is_active"):
-                return c
-        return conns[0]
-    for c in conns:
-        if c["id"] == connection_id:
-            return c
-    return None
+                conn = c
+                break
+        if not conn:
+            conn = conns[0]
+    return DropboxSignClient(api_key=conn["api_key"], base_url=conn.get("base_url", ""))
 
 @chat.function(
     "connect_dropbox_sign",
@@ -44,54 +52,60 @@ async def resolve_connection(ctx, connection_id: str = "") -> dict | None:
     chain_callable=True,
     event="dropbox-sign-connector.connect_dropbox_sign",
     effects=["create:connection"],
-    data_model=ConnectParams
+    data_model=ConnectionRecord
 )
 async def connect_dropbox_sign(params: ConnectParams, ctx) -> ActionResult[ConnectionRecord]:
-    """Connect Dropbox Sign Connector."""
     client = DropboxSignClient(api_key=params.api_key, base_url=params.base_url)
-    await client.verify_auth()
+    res = await client.verify_auth()
+    if res.get("status") == "error":
+        return ActionResult.error(f"Failed to authenticate with Dropbox Sign: {res.get('error')}")
+
     conns = await _load_connections(ctx)
     cid = f"conn_{uuid.uuid4().hex[:8]}"
     record = {
         "id": cid,
-        "label": params.label or "Dropbox Sign Account",
+        "label": params.label or "Primary Dropbox Sign",
         "api_key": params.api_key,
+        "masked_key": _mask(params.api_key),
         "base_url": params.base_url,
         "is_active": True
     }
-    for c in conns: c["is_active"] = False
+    for c in conns:
+        c["is_active"] = False
     conns.append(record)
     await _save_connections(ctx, conns)
-    return ActionResult.ok(ConnectionRecord(id=cid, label=record["label"], masked_key=_mask(params.api_key), base_url=params.base_url, is_active=True))
+    return ActionResult.ok(ConnectionRecord(**record), summary=f"Connected to Dropbox Sign ({record['label']}).")
 
 @chat.function(
     "list_connections",
-    "List connected Dropbox Sign accounts.",
+    "List configured Dropbox Sign connections.",
     action_type="read",
     chain_callable=True,
-    data_model=NoParams
+    event="dropbox-sign-connector.list_connections",
+    effects=["read:connections"],
+    data_model=ConnectionList
 )
 async def list_connections(params: NoParams, ctx) -> ActionResult[ConnectionList]:
     conns = await _load_connections(ctx)
-    records = [ConnectionRecord(id=c["id"], label=c["label"], masked_key=_mask(c.get("api_key", "")), base_url=c.get("base_url", ""), is_active=c.get("is_active", False)) for c in conns]
-    return ActionResult.ok(ConnectionList(connections=records, total=len(records)))
+    recs = [ConnectionRecord(**c) for c in conns]
+    return ActionResult.ok(ConnectionList(connections=recs, total=len(recs)), summary=f"Found {len(recs)} Dropbox Sign connection(s).")
 
 @chat.function(
     "disconnect_dropbox_sign",
-    "Disconnect Dropbox Sign account.",
-    action_type="write",
+    "Disconnect Dropbox Sign account and delete stored credentials.",
+    action_type="destructive",
     chain_callable=True,
     event="dropbox-sign-connector.disconnect_dropbox_sign",
     effects=["delete:connection"],
-    data_model=ConnectionIdParams
+    data_model=DeleteResult
 )
 async def disconnect_dropbox_sign(params: ConnectionIdParams, ctx) -> ActionResult[DeleteResult]:
     conns = await _load_connections(ctx)
-    target = await resolve_connection(ctx, params.connection_id)
-    if not target:
-        return ActionResult.error("Connection not found", code="NOT_FOUND")
-    new_conns = [c for c in conns if c["id"] != target["id"]]
-    if new_conns and target.get("is_active"):
-        new_conns[0]["is_active"] = True
-    await _save_connections(ctx, new_conns)
-    return ActionResult.ok(DeleteResult(id=target["id"], deleted=True, message="Disconnected successfully"))
+    if not conns:
+        return ActionResult.ok(DeleteResult(success=True, message="No active connections to disconnect."), summary="Nothing to disconnect.")
+    if params.connection_id:
+        conns = [c for c in conns if c.get("id") != params.connection_id]
+    else:
+        conns = []
+    await _save_connections(ctx, conns)
+    return ActionResult.ok(DeleteResult(success=True, message="Disconnected Dropbox Sign."), summary="Disconnected connection.")

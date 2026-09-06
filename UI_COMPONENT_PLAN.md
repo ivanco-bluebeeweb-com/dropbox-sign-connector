@@ -1,3 +1,8 @@
-# Dropbox Sign Connector - UI_COMPONENT_PLAN.md
+# Dropbox Sign Connector — UI Component Plan
 
-Standard documentation for Dropbox Sign Connector in Imperal Cloud.
+**Compliance:** UI_INTERFACE_STANDARD.md
+
+## Интерфейс
+- **Левый сайдбар:** Форма подключения на всю ширину контейнера, все инпуты с лейблами и контекстными плейсхолдерами.
+- **Центральная зона:** Карточки статуса подключения, таблица сущностей (запросы на подпись (/signature_request)), журнал операций.
+- **Модальные окна:** Предупреждения и подтверждения для любых деструктивных или модифицирующих действий.
