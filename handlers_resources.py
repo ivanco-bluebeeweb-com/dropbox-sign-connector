@@ -19,7 +19,7 @@ from handlers_connection import resolve_client
     effects=["read:agreements"],
     data_model=AgreementList
 )
-async def list_agreements(params: ListAgreementsParams, ctx) -> ActionResult[AgreementList]:
+async def list_agreements(ctx, params: ListAgreementsParams) -> ActionResult[AgreementList]:
     try:
         client = await resolve_client(ctx, params.connection_id)
         raw_agreements = await client.list_agreements(status=params.status)
@@ -42,7 +42,7 @@ async def list_agreements(params: ListAgreementsParams, ctx) -> ActionResult[Agr
     effects=["read:agreement"],
     data_model=AgreementRecord
 )
-async def get_agreement(params: GetAgreementParams, ctx) -> ActionResult[AgreementRecord]:
+async def get_agreement(ctx, params: GetAgreementParams) -> ActionResult[AgreementRecord]:
     try:
         client = await resolve_client(ctx, params.connection_id)
         raw = await client.get_agreement(params.agreement_id)
@@ -63,7 +63,7 @@ async def get_agreement(params: GetAgreementParams, ctx) -> ActionResult[Agreeme
     effects=["create:signature_request"],
     data_model=AgreementRecord
 )
-async def create_signature_request(params: CreateSignatureRequestParams, ctx) -> ActionResult[AgreementRecord]:
+async def create_signature_request(ctx, params: CreateSignatureRequestParams) -> ActionResult[AgreementRecord]:
     try:
         client = await resolve_client(ctx, params.connection_id)
         res = await client.create_signature_request(
@@ -87,7 +87,7 @@ async def create_signature_request(params: CreateSignatureRequestParams, ctx) ->
     effects=["delete:signature_request"],
     data_model=DeleteResult
 )
-async def cancel_signature_request(params: CancelSignatureRequestParams, ctx) -> ActionResult[DeleteResult]:
+async def cancel_signature_request(ctx, params: CancelSignatureRequestParams) -> ActionResult[DeleteResult]:
     try:
         client = await resolve_client(ctx, params.connection_id)
         res = await client.cancel_signature_request(params.agreement_id, reason=params.reason)
@@ -104,7 +104,7 @@ async def cancel_signature_request(params: CancelSignatureRequestParams, ctx) ->
     effects=["read:audit"],
     data_model=ESignAuditReport
 )
-async def audit_esign_health(params: NoParams, ctx) -> ActionResult[ESignAuditReport]:
+async def audit_esign_health(ctx, params: NoParams) -> ActionResult[ESignAuditReport]:
     try:
         client = await resolve_client(ctx)
         agreements = await client.list_agreements()
