@@ -29,7 +29,7 @@ async def list_agreements(params: ListAgreementsParams, ctx) -> ActionResult[Agr
             name = a.get("name") or a.get("title") or "Untitled Document"
             status = a.get("status") or "UNKNOWN"
             agreements.append(AgreementRecord(id=aid, name=name, status=status, raw=a))
-        return ActionResult.ok(AgreementList(agreements=agreements, total=len(agreements)), summary=f"Retrieved {len(agreements)} agreements from Dropbox Sign.")
+        return ActionResult.success(AgreementList(agreements=agreements, total=len(agreements)), summary=f"Retrieved {len(agreements)} agreements from Dropbox Sign.")
     except Exception as e:
         return ActionResult.error(f"Error listing agreements: {e}")
 
@@ -50,7 +50,7 @@ async def get_agreement(params: GetAgreementParams, ctx) -> ActionResult[Agreeme
         name = raw.get("name") or raw.get("title") or "Document"
         status = raw.get("status") or "ACTIVE"
         rec = AgreementRecord(id=aid, name=name, status=status, raw=raw)
-        return ActionResult.ok(rec, summary=f"Agreement {aid}: {status}.")
+        return ActionResult.success(rec, summary=f"Agreement {aid}: {status}.")
     except Exception as e:
         return ActionResult.error(f"Error getting agreement: {e}")
 
@@ -74,7 +74,7 @@ async def create_signature_request(params: CreateSignatureRequestParams, ctx) ->
         )
         aid = str(res.get("id") or res.get("agreementId") or f"sig_{params.recipient_email}")
         rec = AgreementRecord(id=aid, name=params.title, status="OUT_FOR_SIGNATURE", raw=res)
-        return ActionResult.ok(rec, summary=f"Created signature request '{params.title}' for {params.recipient_email}.")
+        return ActionResult.success(rec, summary=f"Created signature request '{params.title}' for {params.recipient_email}.")
     except Exception as e:
         return ActionResult.error(f"Error creating signature request: {e}")
 
@@ -91,7 +91,7 @@ async def cancel_signature_request(params: CancelSignatureRequestParams, ctx) ->
     try:
         client = await resolve_client(ctx, params.connection_id)
         res = await client.cancel_signature_request(params.agreement_id, reason=params.reason)
-        return ActionResult.ok(DeleteResult(success=True, message=f"Canceled signature request {params.agreement_id}."), summary=f"Canceled signature request {params.agreement_id}.")
+        return ActionResult.success(DeleteResult(success=True, message=f"Canceled signature request {params.agreement_id}."), summary=f"Canceled signature request {params.agreement_id}.")
     except Exception as e:
         return ActionResult.error(f"Error canceling signature request: {e}")
 
@@ -118,6 +118,6 @@ async def audit_esign_health(params: NoParams, ctx) -> ActionResult[ESignAuditRe
             expired_or_declined=expired,
             summary=f"Dropbox Sign health audit: {len(agreements)} total tracked agreements, {pending} pending signatures, {completed} completed."
         )
-        return ActionResult.ok(rep, summary=rep.summary)
+        return ActionResult.success(rep, summary=rep.summary)
     except Exception as e:
         return ActionResult.error(f"Error auditing e-sign health: {e}")
