@@ -274,5 +274,12 @@
       "get_campaign_analytics": 8
     },
     "notes": "Canonical pricing aligned with PRICING_POLICY.md (standard scale 0/8/16/20/40/60)."
-  }
+  },
+  "secrets": [
+    {
+      "name": "dropbox_sign_connections",
+      "description": "Stored encrypted connections and credentials for dropbox-sign-connector",
+      "required": false
+    }
+  ]
 }
